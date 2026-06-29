@@ -70,23 +70,46 @@ const login = async (req, res) => {
     }
 
     // Generate Token
-    const token = jwt.sign(
+    const accessToken = jwt.sign(
       {
         id: user._id,
         role: user.role,
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_ACCESS_SECRET,
       {
-        expiresIn: "1d",
+        expiresIn: "30s",
       }
     );
 
+     // Refresh Token
+    const refreshToken = jwt.sign(
+      {
+        id: user._id,
+      },
+      process.env.JWT_REFRESH_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    // Refresh Token Cookie
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: false, // production me true
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    const { password: pwd, ...userData } = user.toObject();
+
     res.status(200).json({
       success: true,
-      token,
+      accessToken,
       role: user.role,
       user,
     });
+
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -95,7 +118,73 @@ const login = async (req, res) => {
   }
 };
 
+// Refresh Access Token
+const refreshAccessToken = async (req, res) => {
+  console.log("Refresh Token API Called");
+  try {
+    const token = req.cookies.refreshToken;
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Refresh Token Missing",
+      });
+    }
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_REFRESH_SECRET
+    );
+
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const accessToken = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+      },
+      process.env.JWT_ACCESS_SECRET,
+      {
+        expiresIn: "30s",
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      accessToken,
+    });
+
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      message: "Invalid Refresh Token",
+    });
+  }
+};
+
+// Logout
+const logout = (req, res) => {
+  res.clearCookie("refreshToken");
+
+  res.status(200).json({
+    success: true,
+    message: "Logged out successfully",
+  });
+};
+
 module.exports = {
   register,
   login,
+  refreshAccessToken,
+  logout,
 };
+
+
+

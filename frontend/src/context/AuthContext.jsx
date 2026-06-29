@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from "react";
+import api from "../services/api";
 
 const AuthContext = createContext();
 
@@ -18,7 +19,13 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (error) {
+      console.log(error);
+    }
+
     localStorage.removeItem("token");
     localStorage.removeItem("role");
 

@@ -23,9 +23,18 @@ const Login = () => {
     e.preventDefault();
 
     try {
-      const res = await api.post("/auth/login", formData);
+      const res = await api.post(
+  "/auth/login",
+  formData,
+  {
+    withCredentials: true, // agr ye nhi diya to cookie set nhi hoga kiyo ki hum backend se refresh token ko cookie me set kar rhe h
+  }
+);
 
-      login(res.data.token, res.data.role);
+login(
+  res.data.accessToken,
+  res.data.role
+);
 
       if (res.data.role === "admin") {
         navigate("/admin/dashboard");

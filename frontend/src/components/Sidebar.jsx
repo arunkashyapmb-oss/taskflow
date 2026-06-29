@@ -1,14 +1,16 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Sidebar = () => {
+
   const role = localStorage.getItem("role");
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
-  const logoutHandler = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    navigate("/");
-  };
+  const logoutHandler = async () => {
+  await logout();
+  navigate("/");
+};
 
   const navClass = ({ isActive }) =>
     `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200

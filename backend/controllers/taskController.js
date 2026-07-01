@@ -1,6 +1,9 @@
 const Task = require("../models/Task");
 const User = require("../models/User");
 
+const Notification = require("../models/Notification");
+const { getIO, getUsers } = require("../config/socket");
+
 
 const createTask = async (req, res) => {
   try {
@@ -11,6 +14,7 @@ const createTask = async (req, res) => {
       dueDate,
     } = req.body;
 
+    // Create Task
     const task = await Task.create({
       title,
       description,
@@ -18,12 +22,36 @@ const createTask = async (req, res) => {
       dueDate,
     });
 
+    // Save Notification in Database
+    await Notification.create({
+      user: assignedTo,
+      title: "New Task Assigned",
+      message: `You have been assigned a new task: ${title}`,
+    });
+
+    // Send Live Notification
+    const io = getIO();
+    const users = getUsers();
+
+    const socketId = users[assignedTo.toString()];
+
+    if (socketId && io) {
+      io.to(socketId).emit("newNotification", {
+        title: "New Task Assigned",
+        message: `You have been assigned a new task: ${title}`,
+        task,
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: "Task Created Successfully",
       task,
     });
+
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       success: false,
       message: error.message,

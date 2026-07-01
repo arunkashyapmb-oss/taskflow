@@ -1,6 +1,8 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");  // random token generate krne ke liye
+const sendEmail = require("../utils/sendEmail");
 
 // Register User
 const register = async (req, res) => {
@@ -77,7 +79,7 @@ const login = async (req, res) => {
       },
       process.env.JWT_ACCESS_SECRET,
       {
-        expiresIn: "30s",
+        expiresIn: "15m",
       }
     );
 
@@ -106,7 +108,7 @@ const login = async (req, res) => {
       success: true,
       accessToken,
       role: user.role,
-      user,
+      user: userData,
     });
 
 
@@ -152,7 +154,7 @@ const refreshAccessToken = async (req, res) => {
       },
       process.env.JWT_ACCESS_SECRET,
       {
-        expiresIn: "30s",
+        expiresIn: "15m",
       }
     );
 
@@ -165,6 +167,99 @@ const refreshAccessToken = async (req, res) => {
     res.status(401).json({
       success: false,
       message: "Invalid Refresh Token",
+    });
+  }
+};
+
+// Forgot Password  link generate krne ke liye with token
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check User
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Generate Random Token
+    const resetToken = crypto.randomBytes(32).toString("hex"); // generate a random token of 32 bytes and convert it to hex string
+
+    // Save Token in Database
+    user.resetPasswordToken = resetToken;
+
+    // Token Expire After 10 Minutes
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // expire after 10 minutes
+
+    await user.save();
+
+    // Temporary Response (Without Email)
+    const resetLink =
+`http://localhost:5173/reset-password/${resetToken}`;
+
+await sendEmail(
+  user.email,
+  "Password Reset",
+  `Click the link to reset your password:\n\n${resetLink}`
+);
+
+res.status(200).json({
+  success: true,
+  message: "Password reset link sent to your email",
+});
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Reset Password  // reset password krne ke liye token ke sath
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    // Find User By Token
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or Expired Token",
+      });
+    }
+
+    // Hash New Password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update Password
+    user.password = hashedPassword;
+
+    // Remove Reset Token
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password Reset Successfully",
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
@@ -183,6 +278,8 @@ module.exports = {
   register,
   login,
   refreshAccessToken,
+  forgotPassword,
+  resetPassword,
   logout,
 };
 

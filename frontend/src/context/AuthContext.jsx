@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from "react";
 import api from "../services/api";
+import socket from "../socket";
 
 const AuthContext = createContext();
 
@@ -9,7 +10,7 @@ export const AuthProvider = ({ children }) => {
     role: localStorage.getItem("role"),
   });
 
-  const login = (token, role) => {
+  const login = (token, role, userId) => {
     localStorage.setItem("token", token);
     localStorage.setItem("role", role);
 
@@ -17,6 +18,9 @@ export const AuthProvider = ({ children }) => {
       token,
       role,
     });
+
+    // Register User in Socket
+    socket.emit("register", userId);
   };
 
   const logout = async () => {
@@ -25,6 +29,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.log(error);
     }
+
+    socket.disconnect();
 
     localStorage.removeItem("token");
     localStorage.removeItem("role");

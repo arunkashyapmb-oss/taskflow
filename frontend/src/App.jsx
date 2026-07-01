@@ -1,6 +1,10 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import socket from "./socket";
 
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -16,15 +20,27 @@ import Profile from "./pages/user/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
+  useEffect(() => {
+    socket.on("newNotification", (data) => {
+      console.log("🔔 New Notification:", data);
+
+      alert(`${data.title}\n\n${data.message}`);
+    });
+
+    return () => {
+      socket.off("newNotification");
+    };
+  }, []);
+
+  
   return (
     <BrowserRouter>
       <Routes>
-
         {/* Public Route */}
-        <Route
-          path="/"
-          element={<Login />}
-        />
+        <Route path="/" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         {/* Admin Routes */}
         <Route
@@ -81,7 +97,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
       </Routes>
     </BrowserRouter>
   );

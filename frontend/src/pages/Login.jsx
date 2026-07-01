@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -23,19 +24,16 @@ const Login = () => {
     e.preventDefault();
 
     try {
-      const res = await api.post(
-  "/auth/login",
-  formData,
-  {
-    withCredentials: true, // agr ye nhi diya to cookie set nhi hoga kiyo ki hum backend se refresh token ko cookie me set kar rhe h
-  }
-);
+      const res = await api.post("/auth/login", formData, {
+        withCredentials: true, // agr ye nhi diya to cookie set nhi hoga kiyo ki hum backend se refresh token ko cookie me set kar rhe h
+      });
 
-login(
-  res.data.accessToken,
-  res.data.role
-);
+      console.log(res.data.user._id);
 
+      login(
+        res.data.accessToken, 
+        res.data.role, 
+        res.data.user._id);
       if (res.data.role === "admin") {
         navigate("/admin/dashboard");
       } else {
@@ -48,15 +46,11 @@ login(
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-blue-50">
-      
       {/* Card */}
       <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        
         {/* Logo */}
         <div className="text-center mb-6">
-          <div className="text-2xl font-bold text-indigo-600">
-            TaskFlow
-          </div>
+          <div className="text-2xl font-bold text-indigo-600">TaskFlow</div>
           <p className="text-gray-500 text-sm mt-1">
             Welcome back 👋 Please login to continue
           </p>
@@ -64,12 +58,9 @@ login(
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
-
           {/* Email */}
           <div>
-            <label className="text-sm font-medium text-gray-600">
-              Email
-            </label>
+            <label className="text-sm font-medium text-gray-600">Email</label>
             <input
               type="email"
               name="email"
@@ -97,9 +88,12 @@ login(
 
           {/* Forgot */}
           <div className="flex justify-end">
-            <span className="text-sm text-indigo-500 cursor-pointer hover:underline">
-              Forgot password?
-            </span>
+            <Link
+              to="/forgot-password"
+              className="text-sm text-indigo-500 hover:underline"
+            >
+              Forgot Password?
+            </Link>
           </div>
 
           {/* Button */}
@@ -120,7 +114,6 @@ login(
               Register
             </span>
           </p>
-
         </form>
       </div>
     </div>
